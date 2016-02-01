@@ -64,6 +64,7 @@ gravityInput.oninput = function(evt) {
 	gravityOut.innerHTML = g;
 };
 
+var projectile = null;
 var bullet = null;
 var bullets = [];
 
@@ -74,7 +75,7 @@ Promise.all([
 ]).then(function(images) {
 	var cannonBase = images[0];
 	var cannonBody = images[1];
-	var projectile = images[2];
+	projectile = images[2];
 
 	var baseAspect = 1.65;
 	var bodyAspect = 1.475;
@@ -84,6 +85,8 @@ Promise.all([
 
 	var attachPointY = height - baseHeight;
 	var attachPointX = baseHeight * baseAspect * 0.5;
+
+	setupDropZone();
 
 	function drawBody() {
 		var baseAngle = 30;
@@ -191,3 +194,46 @@ Promise.all([
 
 	window.requestAnimationFrame(gameLoop);
 });
+
+var dropZoneElement = $("#projectile_image");
+function setupDropZone() {
+	dropZoneElement.ondragover = function(event) {
+		event.stopPropagation();
+		event.preventDefault();
+
+		dropZoneElement.style.background = "green";
+	};
+
+	dropZoneElement.ondrop = function(event) {
+		event.stopPropagation();
+		event.preventDefault();
+
+		var dataTransfer = event.dataTransfer;
+		var files = dataTransfer.files;
+		if (0 === files.length) {
+			dropZoneElement.style.background = "transparent";
+			return;
+		}
+
+		var file = files[0];
+		var fileReader = new FileReader();
+		fileReader.onload = function (evt) {
+			var result = evt.target.result;
+			loadImage(result)
+				.then(function replaceProjectile(img) {
+					projectile = img;
+					dropZoneElement.src = result;
+				});
+		};
+		fileReader.readAsDataURL(file);
+
+		dropZoneElement.style.background = "transparent";
+	};
+
+	dropZoneElement.ondragleave = function(event) {
+		event.stopPropagation();
+		event.preventDefault();
+		
+		dropZoneElement.style.background = "transparent";
+	};
+}
