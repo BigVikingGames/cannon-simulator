@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Cannon Simulator</title>
+</head>
+<body>
+	<div id="controls">
+		<div>
+			Launch Angle: <span id="angle_out"></span> deg<input type="range" min="0" max="90" id="angle"><br />
+			Velocity: <span id="velocity_out"></span><input type="range" min="10" max="2000" id="velocity"><br />
+			Gravity: <span id="gravity_out"></span><input type="range" min="10" max="2000" id="gravity"><br />
+		</div>
+		<div style="float: right;">
+		</div>
+		<hr />
+		<button id="fire">Fire</button>
+		<hr />
+	</div>
+	<canvas width="2000" height="1000" id="canvas"></canvas>
+</body>
+<script src="cannon.js"></script>
+</html>
