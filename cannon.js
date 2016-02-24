@@ -48,20 +48,20 @@ launchAngleInput.oninput = function(evt) {
 
 var velocityInput = $("#velocity");
 var velocityOut = $("#velocity_out");
-velocityOut.innerHTML = velocity;
+velocityOut.innerHTML = velocity / 100;
 velocityInput.value = velocity;
 velocityInput.oninput = function(evt) {
 	velocity = evt.target.valueAsNumber;
-	velocityOut.innerHTML = velocity;
+	velocityOut.innerHTML = velocity / 100;
 };
 
 var gravityInput = $("#gravity");
 var gravityOut = $("#gravity_out");
-gravityOut.innerHTML = g;
+gravityOut.innerHTML = g / 100;
 gravityInput.value = -g;
 gravityInput.oninput = function(evt) {
 	g = -evt.target.valueAsNumber;
-	gravityOut.innerHTML = g;
+	gravityOut.innerHTML = g / 100;
 };
 
 var projectile = null;
@@ -71,7 +71,7 @@ var bullets = [];
 Promise.all([
 	loadImage("images/cannon_base.png"),
 	loadImage("images/cannon_body.png"),
-	loadImage("images/nate_shirt_iso.png")
+	loadImage("images/vikingball.png")
 ]).then(function(images) {
 	var cannonBase = images[0];
 	var cannonBody = images[1];
@@ -108,11 +108,12 @@ Promise.all([
 	}
 
 	function fire() {
-		bullets.push({
+		bullets.unshift({
 			x: x_0 - 25,
 			y: y_0 - 25,
 			vx: Math.cos(launchAngle * Math.PI / 180) * velocity,
-			vy: -Math.sin(launchAngle * Math.PI / 180) * velocity
+			vy: -Math.sin(launchAngle * Math.PI / 180) * velocity,
+			lifetime: 15000
 		});
 	};
 
@@ -161,6 +162,12 @@ Promise.all([
 			var vy = bullet.vy;
 			var ax = 0;
 			var ay = -g;
+
+			var remainingLifetime = bullet.lifetime - dt;
+			if (remainingLifetime <= 0) {
+				toRemove.push(idx);
+			}
+			bullet.lifetime = remainingLifetime;
 
 			var ds = dt / 1000;
 			x = x + vx * ds;
