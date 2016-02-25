@@ -1,41 +1,46 @@
-function $(sel) {
-	return document.querySelector(sel);
+/**
+ * Select an html element based on the selector
+ * @param {String} selector
+ * @return {Element}
+ */
+function $(selector) {
+	return document.querySelector(selector);
 };
 
+/**
+ * Load an image from a url with a promise.
+ * More information on promises for the very curious here:
+ * https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Promise
+ * @param {String} url
+ */
 function loadImage(url) {
-	return new Promise(function (resolve, reject) {
+	return new Promise(function fetchImage(resolve, reject) {
 		var image = new Image();
-		image.onload = function() {
+		image.onload = function imageLoaded() {
 			resolve(image);
 		}
-
 		image.src = url;
 	});
 }
 
 var fireButton = $("#fire");
-
 var canvas = $("#canvas");
 var context = canvas.getContext("2d");
+
 var width = canvas.width;
 var height = canvas.height;
 
-var g = -980;
-var x = 200;
-var y = height - 200;
-var vx = 0;
-var vy = 0;
-var ax = 0;
-var ay = 0;
-
+var gravity = -980;
 var velocity = 800;
 var launchAngle = 30;
+
+
 var x_0 = 170;
 var y_0 = height - 210;
 var vx_0 = Math.cos(launchAngle * Math.PI / 180);
 var vy_0 = -Math.sin(launchAngle * Math.PI / 180);
 var ax_0 = 0;
-var ay_0 = -g;
+var ay_0 = -gravity;
 
 var launchAngleInput = $("#angle");
 var launchAngleOut = $("#angle_out");
@@ -57,11 +62,11 @@ velocityInput.oninput = function(evt) {
 
 var gravityInput = $("#gravity");
 var gravityOut = $("#gravity_out");
-gravityOut.innerHTML = g / 100;
-gravityInput.value = -g;
+gravityOut.innerHTML = gravity / 100;
+gravityInput.value = -gravity;
 gravityInput.oninput = function(evt) {
-	g = -evt.target.valueAsNumber;
-	gravityOut.innerHTML = g / 100;
+	gravity = -evt.target.valueAsNumber;
+	gravityOut.innerHTML = gravity / 100;
 };
 
 var projectile = null;
@@ -161,7 +166,7 @@ Promise.all([
 			var vx = bullet.vx;
 			var vy = bullet.vy;
 			var ax = 0;
-			var ay = -g;
+			var ay = -gravity;
 
 			var remainingLifetime = bullet.lifetime - dt;
 			if (remainingLifetime <= 0) {
