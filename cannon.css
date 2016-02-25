@@ -2,10 +2,6 @@ body {
 	overflow: hidden;
 }
 
-i {
-	margin-right: 8px;
-}
-
 img {
 	border: 2px solid black;
 	padding: 4px;
@@ -19,12 +15,18 @@ canvas {
 	transform-origin: top left;
 }
 
-.MathJax_Display {
-	display: inline!important;
+.formula {
+	position: absolute; 
+	left: 500px; 
+	top: 25px;
+	transform: scale(2, 2);
+	font-style: italic;
 }
 
 .unit {
 	display: inline-block; 
 	text-align: right; 
 	min-width: 80px;
+	margin-right: 8px;
 }
+
