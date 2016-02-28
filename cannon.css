@@ -1,0 +1,32 @@
+body {
+	overflow: hidden;
+}
+
+img {
+	border: 2px solid black;
+	padding: 4px;
+	width: 50px;
+	height: 50px;
+}
+
+canvas {
+	border-bottom: 10px solid black;
+	transform: scale(0.5, 0.5);
+	transform-origin: top left;
+}
+
+.formula {
+	position: absolute; 
+	left: 500px; 
+	top: 25px;
+	transform: scale(2, 2);
+	font-style: italic;
+}
+
+.unit {
+	display: inline-block; 
+	text-align: right; 
+	min-width: 80px;
+	margin-right: 8px;
+}
+

@@ -1,93 +1,108 @@
-function $(sel) {
-	return document.querySelector(sel);
-};
+var fireButton = document.getElementById("fire");
+var canvas = document.getElementById("canvas");
+var context = canvas.getContext("2d");
 
+// The width of the drawing area
+var WIDTH = canvas.width;
+
+// The height of the drawing area
+var HEIGHT = canvas.height;
+
+// The position of the cannon on the screen
+var cannonX = 170;
+var cannonY = HEIGHT - 210;
+
+// The values we can manipulate with the slider inputs
+var gravity = -980;
+var velocity = 800;
+var launchAngle = 30;
+
+// The variables for the projectiles
+var projectileImage = null;
+var activeProjectiles = [];
+
+
+/**
+ * Load an image from a url with a promise.
+ * More information on promises for the very curious here:
+ * https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Promise
+ * @param {String} url
+ */
 function loadImage(url) {
-	return new Promise(function (resolve, reject) {
+	return new Promise(function fetchImage(resolve, reject) {
 		var image = new Image();
-		image.onload = function() {
+		image.onload = function imageLoaded() {
 			resolve(image);
 		}
-
 		image.src = url;
 	});
 }
 
-var fireButton = $("#fire");
-
-var canvas = $("#canvas");
-var context = canvas.getContext("2d");
-var width = canvas.width;
-var height = canvas.height;
-
-var g = -980;
-var x = 200;
-var y = height - 200;
-var vx = 0;
-var vy = 0;
-var ax = 0;
-var ay = 0;
-
-var velocity = 800;
-var launchAngle = 30;
-var x_0 = 170;
-var y_0 = height - 210;
-var vx_0 = Math.cos(launchAngle * Math.PI / 180);
-var vy_0 = -Math.sin(launchAngle * Math.PI / 180);
-var ax_0 = 0;
-var ay_0 = -g;
-
-var launchAngleInput = $("#angle");
-var launchAngleOut = $("#angle_out");
+/**
+ * Connects the launch angle slider to the actual launch angle.
+ * Also keeps the launch angle label up to date.
+ */
+var launchAngleInput = document.getElementById("angle");
+var launchAngleOut = document.getElementById("angle_out");
 launchAngleOut.innerHTML = launchAngle;
 launchAngleInput.value = launchAngle;
-launchAngleInput.oninput = function(evt) {
-	launchAngle = evt.target.valueAsNumber;
+launchAngleInput.oninput = function onLaunchAngleChanged(inputEvent) {
+	launchAngle = inputEvent.target.valueAsNumber;
 	launchAngleOut.innerHTML = launchAngle;
 };
 
-var velocityInput = $("#velocity");
-var velocityOut = $("#velocity_out");
+/**
+ * Connects the velocity slider to the actual velocity.
+ * Also keeps the velocity label up to date.
+ */
+var velocityInput = document.getElementById("velocity");
+var velocityOut = document.getElementById("velocity_out");
 velocityOut.innerHTML = velocity / 100;
 velocityInput.value = velocity;
-velocityInput.oninput = function(evt) {
-	velocity = evt.target.valueAsNumber;
+velocityInput.oninput = function onVelocityChanged(inputEvent) {
+	velocity = inputEvent.target.valueAsNumber;
 	velocityOut.innerHTML = velocity / 100;
 };
 
-var gravityInput = $("#gravity");
-var gravityOut = $("#gravity_out");
-gravityOut.innerHTML = g / 100;
-gravityInput.value = -g;
-gravityInput.oninput = function(evt) {
-	g = -evt.target.valueAsNumber;
-	gravityOut.innerHTML = g / 100;
+/**
+ * Connects the gravity slider to the actual gravity.
+ * Also keeps the gravity label up to date.
+ */
+var gravityInput = document.getElementById("gravity");
+var gravityOut = document.getElementById("gravity_out");
+gravityOut.innerHTML = gravity / 100;
+gravityInput.value = -gravity;
+gravityInput.oninput = function onGravityChanged(inputEvent) {
+	gravity = -inputEvent.target.valueAsNumber;
+	gravityOut.innerHTML = gravity / 100;
 };
 
-var projectile = null;
-var bullet = null;
-var bullets = [];
-
+/**
+ * The game doesn't work very well until all of the art is loaded
+ * We wait to set up the game and assign the gameplay functions until the images are loaded.
+ */
 Promise.all([
 	loadImage("images/cannon_base.png"),
 	loadImage("images/cannon_body.png"),
 	loadImage("images/vikingball.png")
-]).then(function(images) {
+]).then(function allImagesLoaded(images) {
 	var cannonBase = images[0];
 	var cannonBody = images[1];
-	projectile = images[2];
+	projectileImage = images[2];
 
+	// Determine where to draw the cannon parts
 	var baseAspect = 1.65;
 	var bodyAspect = 1.475;
 	var heightRatio = 1.22;
-
 	var baseHeight = 150;
-
-	var attachPointY = height - baseHeight;
+	var attachPointY = HEIGHT - baseHeight;
 	var attachPointX = baseHeight * baseAspect * 0.5;
 
 	setupDropZone();
 
+	/**
+	 * Draw the body (barrel) of the cannon
+	 */
 	function drawBody() {
 		var baseAngle = 30;
 		var effectiveAngle = Math.PI / 180 * (launchAngle - baseAngle);
@@ -96,8 +111,8 @@ Promise.all([
 		var bodyHeight = baseHeight * heightRatio;
 
 		var launchAngleRad = Math.PI / 180 * launchAngle;
-		x_0 = attachPointX + Math.cos(launchAngleRad) * (bodyWidth - 20) - 25;
-		y_0 = attachPointY - Math.sin(launchAngleRad) * (bodyHeight + 20) - 25;
+		cannonX = attachPointX + Math.cos(launchAngleRad) * (bodyWidth - 20) - 25;
+		cannonY = attachPointY - Math.sin(launchAngleRad) * (bodyHeight + 20) - 25;
 
 		context.save();
 		context.translate(attachPointX, attachPointY);
@@ -107,114 +122,144 @@ Promise.all([
 		context.restore();
 	}
 
+	/**
+	 * Fire the cannon!
+	 */
 	function fire() {
-		bullets.unshift({
-			x: x_0 - 25,
-			y: y_0 - 25,
-			vx: Math.cos(launchAngle * Math.PI / 180) * velocity,
-			vy: -Math.sin(launchAngle * Math.PI / 180) * velocity,
-			lifetime: 15000
+		activeProjectiles.unshift({
+			x: cannonX - 25,
+			y: cannonY - 25,
+			velocityX: Math.cos(launchAngle * Math.PI / 180) * velocity,
+			velocityY: -Math.sin(launchAngle * Math.PI / 180) * velocity,
+			lifetime: 15
 		});
 	};
-
 	fireButton.onclick = fire;
+
+	/**
+	 * Keep track of the spacebar's state.
+	 * We want to know when it's pressed and when it isn't.
+	 */
 	var spaceDown = false;
 	document.onkeydown = function (evt) { 
 		if (evt.keyCode !== 32) {
 			return;
 		}
-
 		spaceDown = true;
 	};
 	document.onkeyup = function (evt) {
 		if (evt.keyCode !== 32) {
 			return;
 		}
-
 		spaceDown = false;
 	};
 
+	/**
+	 * Core game loop
+	 * Everything in the game is based on time 
+	 * (the projectile formulas have 't' in them and this stands for time)
+	 * @param {Number} millisecondTime - The time in milliseconds.
+	 */
 	var previousTime = 0;
-	function gameLoop(time) {
+	function gameLoop(millisecondTime) {
 		if (spaceDown) {
 			fire();
 		}
 
+		// This asks the browser for the next time it has time to do computations
 		window.requestAnimationFrame(gameLoop);
 
-		context.clearRect(0, 0, canvas.width, canvas.height);
+		context.clearRect(0, 0, WIDTH, HEIGHT);
 
 		drawBody();
-		context.drawImage(cannonBase, 0, height - baseHeight, baseHeight * baseAspect, baseHeight);
+		context.drawImage(cannonBase, 0, HEIGHT - baseHeight, baseHeight * baseAspect, baseHeight);
 
-		var dt = time - previousTime;
-		previousTime = time;
+		// Keep track of how much time has passed since the last time the game loop happened.
+		var elapsedSeconds = (millisecondTime - previousTime) / 1000;
+		previousTime = millisecondTime;
 
-		if (bullets.length === 0) {
+		if (activeProjectiles.length === 0) {
 			return;
 		}
 
 		var toRemove = [];
-		bullets.forEach(function integrate(bullet, idx) {
-			var x = bullet.x;
-			var y = bullet.y;
-			var vx = bullet.vx;
-			var vy = bullet.vy;
-			var ax = 0;
-			var ay = -g;
+		 // Process all of the movement for each of the active projectiles
+		activeProjectiles.forEach(function integrate(projectile, idx) {
+			var x = projectile.x;
+			var y = projectile.y;
+			var velocityX = projectile.velocityX;
+			var velocityY = projectile.velocityY;
+			var accelerationX = 0;
+			var accelerationY = -gravity;
 
-			var remainingLifetime = bullet.lifetime - dt;
+			// Make sure that projectiles that have existed longer than their lifespan get cleaned up
+			var remainingLifetime = projectile.lifetime - elapsedSeconds;
 			if (remainingLifetime <= 0) {
 				toRemove.push(idx);
 			}
-			bullet.lifetime = remainingLifetime;
+			projectile.lifetime = remainingLifetime;
 
-			var ds = dt / 1000;
-			x = x + vx * ds;
-			y = y + vy * ds;
+			x = x + velocityX * elapsedSeconds;
+			y = y + velocityY * elapsedSeconds;
 
-			vx = vx + ax * ds;
-			vy = vy + ay * ds;
+			velocityX = velocityX + accelerationX * elapsedSeconds;
+			velocityY = velocityY + accelerationY * elapsedSeconds;
 
-			context.drawImage(projectile, x, y, 50, 50);
+			context.drawImage(projectileImage, x, y, 50, 50);
 
-			if (y > height - 50) {
-				vy = -vy * 0.8;
-				y = height - 51;
+			// Make balls bounce when they hit the floor
+			if (y > HEIGHT - 50) {
+				velocityY = -velocityY * 0.8;
+				y = HEIGHT - 51;
 			}
 
-			if (x > width || (Math.sqrt(vx * vx + vy * vy) < 0.5)) {
+			if (x > WIDTH || (Math.sqrt(velocityX * velocityX + velocityY * velocityY) < 0.5)) {
 				toRemove.push(idx);
 			}
 
-			bullet.x = x;
-			bullet.y = y;
-			bullet.vx = vx;
-			bullet.vy = vy;
+			projectile.x = x;
+			projectile.y = y;
+			projectile.velocityX = velocityX;
+			projectile.velocityY = velocityY;
 		});
 
+		// Remove all of the projectiles that have finished their lifespan
 		toRemove.forEach(function splice(idx) {
-			bullets.splice(idx, 1);
+			activeProjectiles.splice(idx, 1);
 		});
 		
 	};
 
+	// This asks the browser for the next time it has time to do computations
 	window.requestAnimationFrame(gameLoop);
 });
 
-var dropZoneElement = $("#projectile_image");
+/**
+ * Allow the user to drag their own images into the image box to use as projectiles.
+ */
+var dropZoneElement = document.getElementById("projectile_image");
 function setupDropZone() {
-	dropZoneElement.ondragover = function(event) {
+	/**
+	 * Prompt the user that dragging their own image over the box is allowed
+	 */
+	dropZoneElement.ondragover = function onImageDragOver(event) {
+		// Stop the automatic javascript functions to replace them with our own.
 		event.stopPropagation();
 		event.preventDefault();
 
+		// Indicate the user can do this by highlighting it green.
 		dropZoneElement.style.background = "green";
 	};
 
-	dropZoneElement.ondrop = function(event) {
+	/**
+	 * Handle changing the image if they drop the image on the box
+	 */
+	dropZoneElement.ondrop = function onImageDrop(event) {
+		// Stop the automatic javascript functions to replace them with our own.
 		event.stopPropagation();
 		event.preventDefault();
 
+		// Check for files being dragged
 		var dataTransfer = event.dataTransfer;
 		var files = dataTransfer.files;
 		if (0 === files.length) {
@@ -222,13 +267,14 @@ function setupDropZone() {
 			return;
 		}
 
+		// Load the file
 		var file = files[0];
 		var fileReader = new FileReader();
-		fileReader.onload = function (evt) {
-			var result = evt.target.result;
+		fileReader.onload = function onFileLoaded(fileLoadEvent) {
+			var result = fileLoadEvent.target.result;
 			loadImage(result)
 				.then(function replaceProjectile(img) {
-					projectile = img;
+					projectileImage = img;
 					dropZoneElement.src = result;
 				});
 		};
@@ -237,7 +283,11 @@ function setupDropZone() {
 		dropZoneElement.style.background = "transparent";
 	};
 
-	dropZoneElement.ondragleave = function(event) {
+	/**
+	 * Change the drag and drop hint when they stop dragging over the box
+	 */
+	dropZoneElement.ondragleave = function onDragLeave(event) {
+		// Stop the automatic javascript functions to replace them with our own.
 		event.stopPropagation();
 		event.preventDefault();
 		

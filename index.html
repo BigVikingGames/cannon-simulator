@@ -2,42 +2,37 @@
 <html>
 <head>
 	<title>Cannon Simulator</title>
-	<style>
-		.MathJax_Display {
-			display: inline!important;
-		}
-	</style>
+	<link rel="stylesheet" type="text/css" href="cannon.css"/>
 </head>
-<body style="overflow: hidden;">
-	<div style="position: absolute; left: 500px; transform: scale(2, 2);">
-		\[f(x) = x_{0} + vt + \frac{1}{2}at^{2}\]
-		<script type="text/javascript" src="http://www.hostmath.com/Math/MathJax.js?config=OK"></script>
+<body>
+	<div class="formula">
+		f(x) = x<sub>0</sub> + vt + (&frac12;)at<sup>2</sup>
 	</div>
-	<div id="controls">
+	<div>
 		<table>
 			<tr>
 				<td>Launch Angle: </td>
-				<td><div style="display: inline-block; text-align: right; min-width: 80px"><span id="angle_out"></span> <i style="margin-right: 8px;">deg</i></div></td>
+				<td><div class="unit"><span id="angle_out"></span> <i>deg</i></div></td>
 				<td><input type="range" min="0" max="90" id="angle"></td>
 			</tr>
 			<tr>
 				<td>Velocity: </td>
-				<td><div style="display: inline-block; text-align: right; min-width: 80px"><span id="velocity_out"></span> <i style="margin-right: 8px;">m/s</i></div></td>
+				<td><div class="unit"><span id="velocity_out"></span> <i>m/s</i></div></td>
 				<td><input type="range" min="10" max="2000" id="velocity"></td>
 			</tr>
 			<tr>
 				<td>Gravity: </td>
-				<td><div style="display: inline-block; text-align: right; min-width: 80px"><span id="gravity_out"></span><div style="float: right; height: 21px; top: -18px; position: relative; margin-left: 6px">\[m/s^2\]</div></div></td>
+				<td><div class="unit"><span id="gravity_out"></span> <i>m/s<sup>2</sup></i></div></td>
 				<td><input type="range" min="10" max="2000" id="gravity"></td>
 			</tr>
 		</table>
 		Projectile: <br />
-		<img id="projectile_image" style="border: 2px solid black; padding: 4px;" width="50" height="50" src="images/vikingball.png" />
+		<img id="projectile_image" src="images/vikingball.png" />
 		<hr />
 		<button id="fire">Fire</button>
 		<hr />
 	</div>
-	<canvas width="4000" height="1100" id="canvas" style="border-bottom: 10px solid black; transform: scale(0.5, 0.5); transform-origin: top left;"></canvas>
+	<canvas width="4000" height="1100" id="canvas"></canvas>
 </body>
 <script src="cannon.js"></script>
 </html>
