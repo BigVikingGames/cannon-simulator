@@ -17,6 +17,10 @@ var gravity = -980;
 var velocity = 800;
 var launchAngle = 30;
 
+// The variables for the projectiles
+var projectileImage = null;
+var activeProjectiles = [];
+
 
 /**
  * Load an image from a url with a promise.
@@ -73,10 +77,6 @@ gravityInput.oninput = function onGravityChanged(inputEvent) {
 	gravityOut.innerHTML = gravity / 100;
 };
 
-
-var projectile = null;
-var bullets = [];
-
 /**
  * The game doesn't work very well until all of the art is loaded
  * We wait to set up the game and assign the gameplay functions until the images are loaded.
@@ -88,19 +88,21 @@ Promise.all([
 ]).then(function allImagesLoaded(images) {
 	var cannonBase = images[0];
 	var cannonBody = images[1];
-	projectile = images[2];
+	projectileImage = images[2];
 
+	// Determine where to draw the cannon parts
 	var baseAspect = 1.65;
 	var bodyAspect = 1.475;
 	var heightRatio = 1.22;
-
 	var baseHeight = 150;
-
 	var attachPointY = HEIGHT - baseHeight;
 	var attachPointX = baseHeight * baseAspect * 0.5;
 
 	setupDropZone();
 
+	/**
+	 * Draw the body (barrel) of the cannon
+	 */
 	function drawBody() {
 		var baseAngle = 30;
 		var effectiveAngle = Math.PI / 180 * (launchAngle - baseAngle);
@@ -120,39 +122,51 @@ Promise.all([
 		context.restore();
 	}
 
+	/**
+	 * Fire the cannon!
+	 */
 	function fire() {
-		bullets.unshift({
+		activeProjectiles.unshift({
 			x: cannonX - 25,
 			y: cannonY - 25,
-			vx: Math.cos(launchAngle * Math.PI / 180) * velocity,
-			vy: -Math.sin(launchAngle * Math.PI / 180) * velocity,
-			lifetime: 15000
+			velocityX: Math.cos(launchAngle * Math.PI / 180) * velocity,
+			velocityY: -Math.sin(launchAngle * Math.PI / 180) * velocity,
+			lifetime: 15
 		});
 	};
-
 	fireButton.onclick = fire;
+
+	/**
+	 * Keep track of the spacebar's state.
+	 * We want to know when it's pressed and when it isn't.
+	 */
 	var spaceDown = false;
 	document.onkeydown = function (evt) { 
 		if (evt.keyCode !== 32) {
 			return;
 		}
-
 		spaceDown = true;
 	};
 	document.onkeyup = function (evt) {
 		if (evt.keyCode !== 32) {
 			return;
 		}
-
 		spaceDown = false;
 	};
 
+	/**
+	 * Core game loop
+	 * Everything in the game is based on time 
+	 * (the projectile formulas have 't' in them and this stands for time)
+	 * @param {Number} millisecondTime - The time in milliseconds.
+	 */
 	var previousTime = 0;
-	function gameLoop(time) {
+	function gameLoop(millisecondTime) {
 		if (spaceDown) {
 			fire();
 		}
 
+		// This asks the browser for the next time it has time to do computations
 		window.requestAnimationFrame(gameLoop);
 
 		context.clearRect(0, 0, WIDTH, HEIGHT);
@@ -160,74 +174,92 @@ Promise.all([
 		drawBody();
 		context.drawImage(cannonBase, 0, HEIGHT - baseHeight, baseHeight * baseAspect, baseHeight);
 
-		var dt = time - previousTime;
-		previousTime = time;
+		// Keep track of how much time has passed since the last time the game loop happened.
+		var elapsedSeconds = (millisecondTime - previousTime) / 1000;
+		previousTime = millisecondTime;
 
-		if (bullets.length === 0) {
+		if (activeProjectiles.length === 0) {
 			return;
 		}
 
 		var toRemove = [];
-		bullets.forEach(function integrate(bullet, idx) {
-			var x = bullet.x;
-			var y = bullet.y;
-			var vx = bullet.vx;
-			var vy = bullet.vy;
-			var ax = 0;
-			var ay = -gravity;
+		 // Process all of the movement for each of the active projectiles
+		activeProjectiles.forEach(function integrate(projectile, idx) {
+			var x = projectile.x;
+			var y = projectile.y;
+			var velocityX = projectile.velocityX;
+			var velocityY = projectile.velocityY;
+			var accelerationX = 0;
+			var accelerationY = -gravity;
 
-			var remainingLifetime = bullet.lifetime - dt;
+			// Make sure that projectiles that have existed longer than their lifespan get cleaned up
+			var remainingLifetime = projectile.lifetime - elapsedSeconds;
 			if (remainingLifetime <= 0) {
 				toRemove.push(idx);
 			}
-			bullet.lifetime = remainingLifetime;
+			projectile.lifetime = remainingLifetime;
 
-			var ds = dt / 1000;
-			x = x + vx * ds;
-			y = y + vy * ds;
+			x = x + velocityX * elapsedSeconds;
+			y = y + velocityY * elapsedSeconds;
 
-			vx = vx + ax * ds;
-			vy = vy + ay * ds;
+			velocityX = velocityX + accelerationX * elapsedSeconds;
+			velocityY = velocityY + accelerationY * elapsedSeconds;
 
-			context.drawImage(projectile, x, y, 50, 50);
+			context.drawImage(projectileImage, x, y, 50, 50);
 
+			// Make balls bounce when they hit the floor
 			if (y > HEIGHT - 50) {
-				vy = -vy * 0.8;
+				velocityY = -velocityY * 0.8;
 				y = HEIGHT - 51;
 			}
 
-			if (x > WIDTH || (Math.sqrt(vx * vx + vy * vy) < 0.5)) {
+			if (x > WIDTH || (Math.sqrt(velocityX * velocityX + velocityY * velocityY) < 0.5)) {
 				toRemove.push(idx);
 			}
 
-			bullet.x = x;
-			bullet.y = y;
-			bullet.vx = vx;
-			bullet.vy = vy;
+			projectile.x = x;
+			projectile.y = y;
+			projectile.velocityX = velocityX;
+			projectile.velocityY = velocityY;
 		});
 
+		// Remove all of the projectiles that have finished their lifespan
 		toRemove.forEach(function splice(idx) {
-			bullets.splice(idx, 1);
+			activeProjectiles.splice(idx, 1);
 		});
 		
 	};
 
+	// This asks the browser for the next time it has time to do computations
 	window.requestAnimationFrame(gameLoop);
 });
 
+/**
+ * Allow the user to drag their own images into the image box to use as projectiles.
+ */
 var dropZoneElement = document.getElementById("projectile_image");
 function setupDropZone() {
-	dropZoneElement.ondragover = function(event) {
+	/**
+	 * Prompt the user that dragging their own image over the box is allowed
+	 */
+	dropZoneElement.ondragover = function onImageDragOver(event) {
+		// Stop the automatic javascript functions to replace them with our own.
 		event.stopPropagation();
 		event.preventDefault();
 
+		// Indicate the user can do this by highlighting it green.
 		dropZoneElement.style.background = "green";
 	};
 
-	dropZoneElement.ondrop = function(event) {
+	/**
+	 * Handle changing the image if they drop the image on the box
+	 */
+	dropZoneElement.ondrop = function onImageDrop(event) {
+		// Stop the automatic javascript functions to replace them with our own.
 		event.stopPropagation();
 		event.preventDefault();
 
+		// Check for files being dragged
 		var dataTransfer = event.dataTransfer;
 		var files = dataTransfer.files;
 		if (0 === files.length) {
@@ -235,13 +267,14 @@ function setupDropZone() {
 			return;
 		}
 
+		// Load the file
 		var file = files[0];
 		var fileReader = new FileReader();
-		fileReader.onload = function (evt) {
-			var result = evt.target.result;
+		fileReader.onload = function onFileLoaded(fileLoadEvent) {
+			var result = fileLoadEvent.target.result;
 			loadImage(result)
 				.then(function replaceProjectile(img) {
-					projectile = img;
+					projectileImage = img;
 					dropZoneElement.src = result;
 				});
 		};
@@ -250,7 +283,11 @@ function setupDropZone() {
 		dropZoneElement.style.background = "transparent";
 	};
 
-	dropZoneElement.ondragleave = function(event) {
+	/**
+	 * Change the drag and drop hint when they stop dragging over the box
+	 */
+	dropZoneElement.ondragleave = function onDragLeave(event) {
+		// Stop the automatic javascript functions to replace them with our own.
 		event.stopPropagation();
 		event.preventDefault();
 		
