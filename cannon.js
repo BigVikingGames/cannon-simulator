@@ -1,11 +1,22 @@
-/**
- * Select an html element based on the selector
- * @param {String} selector
- * @return {Element}
- */
-function $(selector) {
-	return document.querySelector(selector);
-};
+var fireButton = document.getElementById("fire");
+var canvas = document.getElementById("canvas");
+var context = canvas.getContext("2d");
+
+// The width of the drawing area
+var WIDTH = canvas.width;
+
+// The height of the drawing area
+var HEIGHT = canvas.height;
+
+// The position of the cannon on the screen
+var cannonX = 170;
+var cannonY = HEIGHT - 210;
+
+// The values we can manipulate with the slider inputs
+var gravity = -980;
+var velocity = 800;
+var launchAngle = 30;
+
 
 /**
  * Load an image from a url with a promise.
@@ -23,61 +34,58 @@ function loadImage(url) {
 	});
 }
 
-var fireButton = $("#fire");
-var canvas = $("#canvas");
-var context = canvas.getContext("2d");
-
-var width = canvas.width;
-var height = canvas.height;
-
-var gravity = -980;
-var velocity = 800;
-var launchAngle = 30;
-
-
-var x_0 = 170;
-var y_0 = height - 210;
-var vx_0 = Math.cos(launchAngle * Math.PI / 180);
-var vy_0 = -Math.sin(launchAngle * Math.PI / 180);
-var ax_0 = 0;
-var ay_0 = -gravity;
-
-var launchAngleInput = $("#angle");
-var launchAngleOut = $("#angle_out");
+/**
+ * Connects the launch angle slider to the actual launch angle.
+ * Also keeps the launch angle label up to date.
+ */
+var launchAngleInput = document.getElementById("angle");
+var launchAngleOut = document.getElementById("angle_out");
 launchAngleOut.innerHTML = launchAngle;
 launchAngleInput.value = launchAngle;
-launchAngleInput.oninput = function(evt) {
-	launchAngle = evt.target.valueAsNumber;
+launchAngleInput.oninput = function onLaunchAngleChanged(inputEvent) {
+	launchAngle = inputEvent.target.valueAsNumber;
 	launchAngleOut.innerHTML = launchAngle;
 };
 
-var velocityInput = $("#velocity");
-var velocityOut = $("#velocity_out");
+/**
+ * Connects the velocity slider to the actual velocity.
+ * Also keeps the velocity label up to date.
+ */
+var velocityInput = document.getElementById("velocity");
+var velocityOut = document.getElementById("velocity_out");
 velocityOut.innerHTML = velocity / 100;
 velocityInput.value = velocity;
-velocityInput.oninput = function(evt) {
-	velocity = evt.target.valueAsNumber;
+velocityInput.oninput = function onVelocityChanged(inputEvent) {
+	velocity = inputEvent.target.valueAsNumber;
 	velocityOut.innerHTML = velocity / 100;
 };
 
-var gravityInput = $("#gravity");
-var gravityOut = $("#gravity_out");
+/**
+ * Connects the gravity slider to the actual gravity.
+ * Also keeps the gravity label up to date.
+ */
+var gravityInput = document.getElementById("gravity");
+var gravityOut = document.getElementById("gravity_out");
 gravityOut.innerHTML = gravity / 100;
 gravityInput.value = -gravity;
-gravityInput.oninput = function(evt) {
-	gravity = -evt.target.valueAsNumber;
+gravityInput.oninput = function onGravityChanged(inputEvent) {
+	gravity = -inputEvent.target.valueAsNumber;
 	gravityOut.innerHTML = gravity / 100;
 };
 
+
 var projectile = null;
-var bullet = null;
 var bullets = [];
 
+/**
+ * The game doesn't work very well until all of the art is loaded
+ * We wait to set up the game and assign the gameplay functions until the images are loaded.
+ */
 Promise.all([
 	loadImage("images/cannon_base.png"),
 	loadImage("images/cannon_body.png"),
 	loadImage("images/vikingball.png")
-]).then(function(images) {
+]).then(function allImagesLoaded(images) {
 	var cannonBase = images[0];
 	var cannonBody = images[1];
 	projectile = images[2];
@@ -88,7 +96,7 @@ Promise.all([
 
 	var baseHeight = 150;
 
-	var attachPointY = height - baseHeight;
+	var attachPointY = HEIGHT - baseHeight;
 	var attachPointX = baseHeight * baseAspect * 0.5;
 
 	setupDropZone();
@@ -101,8 +109,8 @@ Promise.all([
 		var bodyHeight = baseHeight * heightRatio;
 
 		var launchAngleRad = Math.PI / 180 * launchAngle;
-		x_0 = attachPointX + Math.cos(launchAngleRad) * (bodyWidth - 20) - 25;
-		y_0 = attachPointY - Math.sin(launchAngleRad) * (bodyHeight + 20) - 25;
+		cannonX = attachPointX + Math.cos(launchAngleRad) * (bodyWidth - 20) - 25;
+		cannonY = attachPointY - Math.sin(launchAngleRad) * (bodyHeight + 20) - 25;
 
 		context.save();
 		context.translate(attachPointX, attachPointY);
@@ -114,8 +122,8 @@ Promise.all([
 
 	function fire() {
 		bullets.unshift({
-			x: x_0 - 25,
-			y: y_0 - 25,
+			x: cannonX - 25,
+			y: cannonY - 25,
 			vx: Math.cos(launchAngle * Math.PI / 180) * velocity,
 			vy: -Math.sin(launchAngle * Math.PI / 180) * velocity,
 			lifetime: 15000
@@ -147,10 +155,10 @@ Promise.all([
 
 		window.requestAnimationFrame(gameLoop);
 
-		context.clearRect(0, 0, canvas.width, canvas.height);
+		context.clearRect(0, 0, WIDTH, HEIGHT);
 
 		drawBody();
-		context.drawImage(cannonBase, 0, height - baseHeight, baseHeight * baseAspect, baseHeight);
+		context.drawImage(cannonBase, 0, HEIGHT - baseHeight, baseHeight * baseAspect, baseHeight);
 
 		var dt = time - previousTime;
 		previousTime = time;
@@ -183,12 +191,12 @@ Promise.all([
 
 			context.drawImage(projectile, x, y, 50, 50);
 
-			if (y > height - 50) {
+			if (y > HEIGHT - 50) {
 				vy = -vy * 0.8;
-				y = height - 51;
+				y = HEIGHT - 51;
 			}
 
-			if (x > width || (Math.sqrt(vx * vx + vy * vy) < 0.5)) {
+			if (x > WIDTH || (Math.sqrt(vx * vx + vy * vy) < 0.5)) {
 				toRemove.push(idx);
 			}
 
@@ -207,7 +215,7 @@ Promise.all([
 	window.requestAnimationFrame(gameLoop);
 });
 
-var dropZoneElement = $("#projectile_image");
+var dropZoneElement = document.getElementById("projectile_image");
 function setupDropZone() {
 	dropZoneElement.ondragover = function(event) {
 		event.stopPropagation();
